@@ -1,0 +1,8 @@
+*/Debug
+*/Release
+.vs
+*.metagen
+*.pdb
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
