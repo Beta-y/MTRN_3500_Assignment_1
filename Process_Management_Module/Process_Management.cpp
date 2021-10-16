@@ -17,13 +17,13 @@ using namespace System::Text;
 using namespace std;
 #define NUM_UNITS 5
 
-void SetupSharedMemory(ProcessManagement *ProcessManagementPtr);
+void SetupSharedMemory(ProcessManagement* ProcessManagementPtr);
 bool StartProcess(TCHAR* processName, STARTUPINFO* startupInfo, PROCESS_INFORMATION* processInfo);
-bool KillProcess(TCHAR* processName,HANDLE processHandle);
+bool KillProcess(TCHAR* processName, HANDLE processHandle);
 bool IsProcessRunning(const char* processName);
 
 //Definition of the start up sequences
-TCHAR Units[5][30] = 
+TCHAR Units[5][30] =
 {
 	TEXT("Camera_Module.exe"),        // 0
 	TEXT("GPS_Module.exe"),           // 1
@@ -40,7 +40,7 @@ int main()
 	SMObject ProcessManagementObj(_TEXT("ProcessManagement"), sizeof(ProcessManagement));
 	ProcessManagementObj.SMCreate();// Build up the handle of SMO
 	ProcessManagementObj.SMAccess();// Open the existed handle of SMO
-	ProcessManagement *ProcessManagementPtr = (ProcessManagement*)ProcessManagementObj.pData;
+	ProcessManagement* ProcessManagementPtr = (ProcessManagement*)ProcessManagementObj.pData;
 
 	// Do not shut down any processes at the startup of the program
 	ProcessManagementPtr->Shutdown.Flags.Camera = 0b0;
@@ -79,17 +79,17 @@ int main()
 
 	Sleep(1000);// Wait for 1s to allow processes to fully start up
 
-	int cnt_Laser   = 0;
-	int cnt_GPS     = 0;
-	int cnt_OpenGL  = 0;
+	int cnt_Laser = 0;
+	int cnt_GPS = 0;
+	int cnt_OpenGL = 0;
 	int cnt_VehicleControl = 0;
-	int cnt_Camera  = 0;
+	int cnt_Camera = 0;
 	int MAX_WAITBEAT = 100;
 	// main loop
 	while (1)
 	{
 		// Press Esc || PM Module break down  to break 
-		if ((_kbhit() && _getch() == 27)|| ProcessManagementPtr->Shutdown.Flags.ProcessManagement == 0b1) break; //You can set it to 0b1 in other module's exceptions to shutdown the whole PM process, which means it's a cross-level operation.
+		if ((_kbhit() && _getch() == 27) || ProcessManagementPtr->Shutdown.Flags.ProcessManagement == 0b1) break; //You can set it to 0b1 in other module's exceptions to shutdown the whole PM process, which means it's a cross-level operation.
 
 		/* Heartbear check, need simplification*/
 		if (ProcessManagementPtr->Shutdown.Flags.Laser == 0b1)
@@ -120,7 +120,7 @@ int main()
 		}
 		else if (ProcessManagementPtr->Heartbeat.Flags.Camera == 0b1)
 		{
-			ProcessManagementPtr->Heartbeat.Flags.Camera = 0b0; 
+			ProcessManagementPtr->Heartbeat.Flags.Camera = 0b0;
 			cnt_Camera = 0;
 		}
 		else if (ProcessManagementPtr->Heartbeat.Flags.Camera == 0b0)
@@ -197,26 +197,26 @@ int main()
 		}
 	}
 
-    //kill all 5 modules
+	//kill all 5 modules
 	for (int i = 0; i < NUM_UNITS; i++)
 	{
 		KillProcess(Units[i], processinfos[i].hProcess);
 	}
-	
+
 	// kill PM module
 	return 0;
 }
 
-void SetupSharedMemory(ProcessManagement *ProcessManagementPtr)
+void SetupSharedMemory(ProcessManagement* ProcessManagementPtr)
 {
 
 }
 // Starting funtion of a process
-bool StartProcess(TCHAR *processName, STARTUPINFO *startupInfo, PROCESS_INFORMATION *processInfo)
+bool StartProcess(TCHAR* processName, STARTUPINFO* startupInfo, PROCESS_INFORMATION* processInfo)
 //	STARTUPINFO: https://blog.csdn.net/akof1314/article/details/5471727
 //  PROCESS_INFORMATION:  https://blog.csdn.net/akof1314/article/details/5471768
 {
-	if (!IsProcessRunning(processName))
+	if (!IsProcessRunning((const char*)processName))
 	{
 		ZeroMemory(startupInfo, sizeof(*startupInfo)); //ZeroMemory宏用0来填充一块内存区域
 		(*startupInfo).cb = sizeof(*startupInfo);
@@ -234,19 +234,19 @@ bool StartProcess(TCHAR *processName, STARTUPINFO *startupInfo, PROCESS_INFORMAT
 }
 
 // Killing funtion of a process
-bool KillProcess(TCHAR* processName,HANDLE processHandle)
+bool KillProcess(TCHAR* processName, HANDLE processHandle)
 //TerminateProcess:  https://blog.csdn.net/eunyeon/article/details/53708168
 {
 	bool killedFlag = false;
-	if (!IsProcessRunning(processName))
+	if (!IsProcessRunning((const char*)processName))
 	{
 		std::cout << "Doesn't exist: " << processName << std::endl;
 	}
-	else if(!TerminateProcess(processHandle, 0))
+	else if (!TerminateProcess(processHandle, 0))
 	{
 		printf("Kill %s failed (%d).\n", processName, GetLastError());
 	}
-	else 
+	else
 	{
 		CloseHandle(processHandle);
 		std::cout << "Killed: " << processName << std::endl;

@@ -20,14 +20,14 @@ int main()
 	/* Open existed SharedMemory Object, no need to create a new one.*/
 	SMObject ProcessManagementObj(_TEXT("ProcessManagement"), sizeof(ProcessManagement));
 	ProcessManagementObj.SMAccess();// Open the existed handle of SMO
-	ProcessManagement *ProcessManagementPtr = (ProcessManagement*)ProcessManagementObj.pData;
+	ProcessManagement* ProcessManagementPtr = (ProcessManagement*)ProcessManagementObj.pData;
 
 	SMObject SM_LaserObj(_TEXT("SM_Laser"), sizeof(SM_Laser));
 	SM_LaserObj.SMAccess();
 	SM_Laser* SM_LaserPtr = (SM_Laser*)SM_LaserObj.pData;
 
 	/* Socket Communication*/
-	/* 
+	/*
 		Some blogs about socket communication
 			https://blog.csdn.net/xiaoquantouer/article/details/58001960
 			https://zhuanlan.zhihu.com/p/75672631
@@ -89,7 +89,7 @@ int main()
 	int MAX_WAITBEAT = 100;
 	/* Loop */
 	while (!ProcessManagementPtr->Shutdown.Flags.Laser)
-	{	
+	{
 		if (ProcessManagementPtr->Heartbeat.Flags.Laser == 0b0)
 		{
 			/* Heart beats */
@@ -133,8 +133,8 @@ int main()
 				for (int step = 0; step < numberData; step++)
 				{
 					isin >> std::hex >> dataTmp;
-					SM_LaserPtr->x[step] = dataTmp * cos((startAngle+stepWidth * step) * (PI / 180));
-					SM_LaserPtr->y[step] = dataTmp * sin((startAngle+stepWidth * step) * (PI / 180));
+					SM_LaserPtr->x[step] = dataTmp * cos((startAngle + stepWidth * step) * (PI / 180));
+					SM_LaserPtr->y[step] = dataTmp * sin((startAngle + stepWidth * step) * (PI / 180));
 					printf("(x[%d], y[%d]) = (%.3f, %.3f)\n", step, step, SM_LaserPtr->x[step], SM_LaserPtr->y[step]);
 				}
 			}

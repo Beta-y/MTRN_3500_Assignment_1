@@ -40,7 +40,6 @@ GPS::~GPS()
 	// YOUR CODE HERE
 }
 
-/* User Manual P24 */
 unsigned long CRC32Value(int i)
 {
 	int j;
@@ -56,7 +55,6 @@ unsigned long CRC32Value(int i)
 	return ulCRC;
 }
 
-/* User Manual P24 */
 unsigned long CalculateBlockCRC32(unsigned long ulCount, /* Number of bytes in the data block */
 	unsigned char* ucBuffer) /* Data block */
 {

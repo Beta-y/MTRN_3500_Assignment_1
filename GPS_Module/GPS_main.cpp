@@ -36,8 +36,8 @@ int main()
 	GPS_Client->SendBufferSize = SENDBUF_MAXSIZE;
 
 	/* Recv buffer*/
-	array<unsigned char>^ GPS_Data;
-	GPS_Data = gcnew array<unsigned char>(RECVBUF_MAXSIZE);
+	array<unsigned char>^ GPS_RecvData;
+	GPS_RecvData = gcnew array<unsigned char>(RECVBUF_MAXSIZE);
 
 	NetworkStream^ NETStream = GPS_Client->GetStream();
 	int cnt_ProcessManagement = 0;
@@ -52,7 +52,7 @@ int main()
 			cnt_ProcessManagement = 0;
 			if (NETStream->DataAvailable)
 			{
-				NETStream->Read(GPS_Data, 0, GPS_Data->Length);
+				NETStream->Read(GPS_RecvData, 0, GPS_RecvData->Length);
 
 				/* Codes from lecture slite - begin*/
 				unsigned int Header = 0;
@@ -62,12 +62,12 @@ int main()
 				// Find the header
 				do
 				{
-					Data = GPS_Data[i++]; // 1bytes = 8bits
+					Data = GPS_RecvData[i++]; // 1bytes = 8bits
 					Header = ((Header << 8) | Data);// Left-move 1bytes everyloop, OR-operation means 1|0 = 1; 0|0 = 0; 1|1 = 1;
 				} while (Header != 0xaa44121c);
 
 				// Where header begins, -4 bytes
-				Start = i - 4 ;
+				Start = i - 4;
 
 				SM_GPS GPS_SMOBject;
 				unsigned char* GPS_BytePtr = (unsigned char*)&GPS_SMOBject;
@@ -75,18 +75,18 @@ int main()
 				/* Process data Begin:
 					if data from GPS include:northing->easting->height->other info->CRC checksum */
 				int j = 0;
-				for (j = Start; j < Start + sizeof(SM_GPS)-sizeof(unsigned int); j++)// GPS_SMOBject.northing, GPS_SMOBject.easting, GPS_SMOBject.height
+				for (j = Start; j < Start + sizeof(SM_GPS) - sizeof(unsigned int); j++)// GPS_SMOBject.northing, GPS_SMOBject.easting, GPS_SMOBject.height
 				{
-					*(GPS_BytePtr++) = GPS_Data[j];
+					*(GPS_BytePtr++) = GPS_RecvData[j];
 				}
 				//Where "CRC checksum" begins, 40 bytes
 				j = j + 40;// 40 bytes
 				// GPS_SMOBject.checksum
 				for (int k = j; k < j + sizeof(unsigned int); k++)
 				{
-					*(GPS_BytePtr++) = GPS_Data[k];
+					*(GPS_BytePtr++) = GPS_RecvData[k];
 				}
-				unsigned long CRC_checksum = CalculateBlockCRC32(28+80, (unsigned char*)&GPS_Data[Start]);
+				unsigned long CRC_checksum = CalculateBlockCRC32(28 + 80, (unsigned char*)(GPS_RecvData[Start]));
 				if (GPS_SMOBject.checksum == CRC_checksum)
 				{
 					SM_GPSPtr->northing = GPS_SMOBject.northing;
@@ -105,7 +105,7 @@ int main()
 				std::cout << "Height: " << GPS_SMOBject.height << std::endl;
 				std::cout << std::hex << "Recv_CRC: " << GPS_SMOBject.checksum << std::endl;
 				std::cout << std::hex << "Cac_CRC: " << CRC_checksum << std::endl;
-			}	
+			}
 		}
 		else
 		{
