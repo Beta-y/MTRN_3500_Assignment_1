@@ -38,6 +38,11 @@
 #include "Messages.hpp"
 #include "HUD.hpp"
 
+/**************************** Your code begin *****************************/
+#include <SMStructs.h>
+#include <SMObject.h>
+/**************************** Your code end *****************************/
+
 void display();
 void reshape(int width, int height);
 void idle();
@@ -63,6 +68,13 @@ int prev_mouse_y = -1;
 Vehicle * vehicle = NULL;
 double speed = 0;
 double steering = 0;
+
+ProcessManagement* ProcessManagementPtr = NULL;
+SM_Laser* SM_LaserPtr = NULL;
+SM_GPS* SM_GPSPtr = NULL;
+SM_VehicleControl* SM_VehicleControlPtr = NULL;
+int cnt_ProcessManagement = 0;
+int MAX_WAITBEAT = 100;
 
 //int _tmain(int argc, _TCHAR* argv[]) {
 int main(int argc, char ** argv) {
@@ -93,6 +105,30 @@ int main(int argc, char ** argv) {
 	glutMotionFunc(dragged);
 	glutPassiveMotionFunc(motion);
 
+
+	/**************************** Your code begin *****************************/
+
+	/* Open existed SharedMemory Object, no need to create a new one.*/
+	SMObject ProcessManagementObj(_TEXT("ProcessManagement"), sizeof(ProcessManagement));
+	ProcessManagementObj.SMAccess();// Open the existed handle of SMO
+	ProcessManagementPtr = (ProcessManagement*)ProcessManagementObj.pData;
+
+	SMObject SM_LaserObj(_TEXT("SM_Laser"), sizeof(SM_Laser));
+	SM_LaserObj.SMAccess();
+	SM_LaserPtr = (SM_Laser*)SM_LaserObj.pData;
+
+	SMObject SM_GPSObj(_TEXT("SM_GPS"), sizeof(SM_GPS));
+	SM_GPSObj.SMAccess();
+	SM_GPSPtr = (SM_GPS*)SM_GPSObj.pData;
+
+	SMObject SM_VehicleControlObj(_TEXT("SM_VehicleControl"), sizeof(SM_VehicleControl));
+	SM_VehicleControlObj.SMAccess();
+	SM_VehicleControlPtr = (SM_VehicleControl*)SM_VehicleControlObj.pData;
+
+		
+	/***************************** Your code end *****************************/
+
+
 	// -------------------------------------------------------------------------
 	// Please uncomment the following line of code and replace 'MyVehicle'
 	//   with the name of the class you want to show as the current 
@@ -110,6 +146,26 @@ int main(int argc, char ** argv) {
 	return 0;
 }
 
+/**************************** Your code begin *****************************/
+bool heartbeats()
+{
+	if (ProcessManagementPtr->Heartbeat.Flags.Camera == 0b0)
+	{
+		/* Heart beats */
+		ProcessManagementPtr->Heartbeat.Flags.Camera == 0b1;
+		cnt_ProcessManagement = 0;
+	}
+	else
+	{
+		if (cnt_ProcessManagement++ > MAX_WAITBEAT)
+		{
+			ProcessManagementPtr->Shutdown.Flags.Camera = 0b1;
+			return false;
+		}
+	}
+	return true;
+}
+/***************************** Your code end *****************************/
 
 void display() {
 	// -------------------------------------------------------------------------
@@ -143,6 +199,7 @@ void display() {
 	// draw HUD
 	HUD::Draw();
 
+
 	glutSwapBuffers();
 };
 
@@ -174,6 +231,11 @@ double getTime()
 }
 
 void idle() {
+	/**************************** Your code begin *****************************/
+	if (!heartbeats()) exit(0);// Heatbeats failed, exit the whole process.
+	/**************************** Your code end *****************************/
+
+
 
 	if (KeyManager::get()->isAsciiKeyPressed('a')) {
 		Camera::get()->strafeLeft();
@@ -217,9 +279,6 @@ void idle() {
 	if (KeyManager::get()->isSpecialKeyPressed(GLUT_KEY_DOWN)) {
 		speed = Vehicle::MAX_BACKWARD_SPEED_MPS;
 	}
-
-
-
 
 	const float sleep_time_between_frames_in_seconds = 0.025;
 
@@ -301,5 +360,3 @@ void motion(int x, int y) {
 	prev_mouse_x = x;
 	prev_mouse_y = y;
 };
-
-
