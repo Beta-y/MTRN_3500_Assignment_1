@@ -24,7 +24,7 @@
 
 #include <stdio.h>
 #include <math.h>
-
+#include <iostream>
 #include <map>
 
 
@@ -54,6 +54,8 @@ void HUD::DrawGauge(double x, double y, double r, double min, double max, double
 
 	glTranslatef(x, y, 0);
 	glDisable(GL_LIGHTING);
+
+
 
 	y = sin((startR) * DEGTORAD);
 	// text label
@@ -93,6 +95,7 @@ void HUD::DrawGauge(double x, double y, double r, double min, double max, double
 		valPos = endR;
 	//else
 	//	valPos = (int) (valPos*2.0)/2.0;
+
 
 	// draw the bar
 	double barW = 1;
@@ -134,6 +137,8 @@ void HUD::DrawGauge(double x, double y, double r, double min, double max, double
 			glVertex2f((r2+15) * x, (r2+15) * y);
 		}
 	glEnd();
+
+
 
 	glPopMatrix();
 }

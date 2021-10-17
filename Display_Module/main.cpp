@@ -41,6 +41,11 @@
 /**************************** Your code begin *****************************/
 #include <SMStructs.h>
 #include <SMObject.h>
+
+void drawGPS();
+void drawString(const char* str);
+void selectFont(int size, int charset, const char* face);
+void drawLaser();
 /**************************** Your code end *****************************/
 
 void display();
@@ -69,18 +74,19 @@ Vehicle * vehicle = NULL;
 double speed = 0;
 double steering = 0;
 
-ProcessManagement* ProcessManagementPtr = NULL;
-SM_Laser* SM_LaserPtr = NULL;
-SM_GPS* SM_GPSPtr = NULL;
-SM_VehicleControl* SM_VehicleControlPtr = NULL;
-int cnt_ProcessManagement = 0;
-int MAX_WAITBEAT = 100;
+//ProcessManagement* ProcessManagementPtr = NULL;
+//SM_Laser* SM_LaserPtr = NULL;
+//SM_GPS* SM_GPSPtr = NULL;
+//SM_VehicleControl* SM_VehicleControlPtr = NULL;
+//int cnt_ProcessManagement = 0;
+//int MAX_WAITBEAT = 100;
 
+const int WINDOW_WIDTH = 800;
+const int WINDOW_HEIGHT = 600;
 //int _tmain(int argc, _TCHAR* argv[]) {
 int main(int argc, char ** argv) {
 
-	const int WINDOW_WIDTH = 800;
-	const int WINDOW_HEIGHT = 600;
+
 
 	glutInit(&argc, (char**)(argv));
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
@@ -108,22 +114,22 @@ int main(int argc, char ** argv) {
 
 	/**************************** Your code begin *****************************/
 
-	/* Open existed SharedMemory Object, no need to create a new one.*/
-	SMObject ProcessManagementObj(_TEXT("ProcessManagement"), sizeof(ProcessManagement));
-	ProcessManagementObj.SMAccess();// Open the existed handle of SMO
-	ProcessManagementPtr = (ProcessManagement*)ProcessManagementObj.pData;
+	///* Open existed SharedMemory Object, no need to create a new one.*/
+	//SMObject ProcessManagementObj(_TEXT("ProcessManagement"), sizeof(ProcessManagement));
+	//ProcessManagementObj.SMAccess();// Open the existed handle of SMO
+	//ProcessManagementPtr = (ProcessManagement*)ProcessManagementObj.pData;
 
-	SMObject SM_LaserObj(_TEXT("SM_Laser"), sizeof(SM_Laser));
-	SM_LaserObj.SMAccess();
-	SM_LaserPtr = (SM_Laser*)SM_LaserObj.pData;
+	//SMObject SM_LaserObj(_TEXT("SM_Laser"), sizeof(SM_Laser));
+	//SM_LaserObj.SMAccess();
+	//SM_LaserPtr = (SM_Laser*)SM_LaserObj.pData;
 
-	SMObject SM_GPSObj(_TEXT("SM_GPS"), sizeof(SM_GPS));
-	SM_GPSObj.SMAccess();
-	SM_GPSPtr = (SM_GPS*)SM_GPSObj.pData;
+	//SMObject SM_GPSObj(_TEXT("SM_GPS"), sizeof(SM_GPS));
+	//SM_GPSObj.SMAccess();
+	//SM_GPSPtr = (SM_GPS*)SM_GPSObj.pData;
 
-	SMObject SM_VehicleControlObj(_TEXT("SM_VehicleControl"), sizeof(SM_VehicleControl));
-	SM_VehicleControlObj.SMAccess();
-	SM_VehicleControlPtr = (SM_VehicleControl*)SM_VehicleControlObj.pData;
+	//SMObject SM_VehicleControlObj(_TEXT("SM_VehicleControl"), sizeof(SM_VehicleControl));
+	//SM_VehicleControlObj.SMAccess();
+	//SM_VehicleControlPtr = (SM_VehicleControl*)SM_VehicleControlObj.pData;
 
 		
 	/***************************** Your code end *****************************/
@@ -149,22 +155,130 @@ int main(int argc, char ** argv) {
 /**************************** Your code begin *****************************/
 bool heartbeats()
 {
-	if (ProcessManagementPtr->Heartbeat.Flags.Camera == 0b0)
-	{
-		/* Heart beats */
-		ProcessManagementPtr->Heartbeat.Flags.Camera == 0b1;
-		cnt_ProcessManagement = 0;
-	}
-	else
-	{
-		if (cnt_ProcessManagement++ > MAX_WAITBEAT)
-		{
-			ProcessManagementPtr->Shutdown.Flags.Camera = 0b1;
-			return false;
-		}
-	}
+	//if (ProcessManagementPtr->Heartbeat.Flags.Camera == 0b0)
+	//{
+	//	/* Heart beats */
+	//	ProcessManagementPtr->Heartbeat.Flags.Camera == 0b1;
+	//	cnt_ProcessManagement = 0;
+	//}
+	//else
+	//{
+	//	if (cnt_ProcessManagement++ > MAX_WAITBEAT)
+	//	{
+	//		ProcessManagementPtr->Shutdown.Flags.Camera = 0b1;
+	//		return false;
+	//	}
+	//}
 	return true;
 }
+
+void drawGPS()
+{
+	double northing = vehicle->getX() + 90000000;
+	double easting = vehicle->getZ() + 500000;
+	unsigned int height = vehicle->getY();
+
+	glPushMatrix();
+	glColor3f(0.0, 1.0, 0.0);
+	vehicle->positionInGL();
+	char* str = NULL;
+	str = new char[30];
+	sprintf(str, "(%.2f, %.2f, %d)", northing-90000000, easting - 500000,height);
+	glRasterPos3f(0, 1.0, 0);// car: xOz plane, z: height
+	selectFont(20, ANSI_CHARSET, "Times New Roman");
+	drawString(str);
+	glPopMatrix();
+	delete[]str;
+}
+
+// ASCII字符总共只有0到127，一共128种字符
+#define MAX_CHAR       128
+void drawString(const char* str)
+{
+	static int isFirstCall = 1;
+	static GLuint lists;
+
+	if (isFirstCall) { // 如果是第一次调用，执行初始化
+						// 为每一个ASCII字符产生一个显示列表
+		isFirstCall = 0;
+
+		// 申请MAX_CHAR个连续的显示列表编号
+		lists = glGenLists(MAX_CHAR);
+
+		// 把每个字符的绘制命令都装到对应的显示列表中
+		wglUseFontBitmaps(wglGetCurrentDC(), 0, MAX_CHAR, lists);
+	}
+	// 调用每个字符对应的显示列表，绘制每个字符
+	for (; *str != '\0'; ++str)
+		glCallList(lists + *str);
+}
+
+void selectFont(int size, int charset, const char* face) {
+	HFONT hFont = CreateFontA(size, 0, 0, 0, FW_MEDIUM, 0, 0, 0,
+		charset, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+		DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, face);
+	HFONT hOldFont = (HFONT)SelectObject(wglGetCurrentDC(), hFont);
+	DeleteObject(hOldFont);
+}
+
+void drawLaser()
+{
+	
+	glPushMatrix();
+	vehicle->positionInGL();
+	//glTranslated(0.5, 0, 0);
+	glColor3f(1.0, 0, .5);
+	glBegin(GL_LINES);
+
+	glVertex3f(0, 1.0, 0);
+
+	glVertex3f(1000/1000, 1.0, 1000/1000);
+	glEnd();
+	glPopMatrix();
+}
+//void drawGPS(double northing, double easting, double height)
+//{
+//
+//
+//	//glPushMatrix	 https://docs.microsoft.com/zh-cn/windows/win32/opengl/glpushmatrix
+//	//glTranslated   https://docs.microsoft.com/zh-cn/windows/win32/opengl/gltranslated
+//	Camera::get()->switchTo2DDrawing();
+//	int Half_winWidth = (Camera::get()->getWindowWidth()) * .5;
+//	//int Half_winHeight = (Camera::get()->getWindowHeight()) * .5;
+// 
+//	glPushMatrix();
+//	glTranslatef(Half_winWidth, 0, 0);// 移动到正中心
+//	//glDisable(GL_LIGHTING);
+//	
+//	//绘制中心线
+//	glColor3f(.5, .5, .5);
+//	glLineStipple(1, 0x0F0F);
+//	glEnable(GL_LINE_STIPPLE);
+//	glBegin(GL_LINES);
+//	
+//	glVertex2f(0, 0);
+//	glVertex2f(0, 60);
+//	glEnd();
+//	glDisable(GL_LINE_STIPPLE);
+//	glPopMatrix();
+//	Camera::get()->switchTo3DDrawing();
+//
+//	//Camera::get()->switchTo2DDrawing();
+//	//int winWidthOff = (Camera::get()->getWindowWidth() - 800) * .5;
+//	//if (winWidthOff < 0)
+//	//	winWidthOff = 0;
+//
+//	//if (vehicle) {
+//	//	glColor3f(0, 1, 0);
+//	//	HUD::DrawGauge(winWidthOff, 480, 210, -1, 1, vehicle->getSpeed(), "Speed");
+//	//}
+//
+//	//Camera::get()->switchTo3DDrawing();
+//
+//
+//}
+
+
 /***************************** Your code end *****************************/
 
 void display() {
@@ -190,16 +304,23 @@ void display() {
 	Ground::draw();
 	
 	// draw my vehicle
+
+	/**************************** Your code begin *****************************/
+	//vehicle->setX(SM_GPSPtr->northing);
+	//vehicle->setZ(SM_GPSPtr->easting);
+	//vehicle->setY(SM_GPSPtr->height);
+	/**************************** Your code end *****************************/
+
 	if (vehicle != NULL) {
 		vehicle->draw();
-
 	}
 
 
 	// draw HUD
 	HUD::Draw();
 
-
+	drawGPS();
+	drawLaser();
 	glutSwapBuffers();
 };
 
@@ -231,9 +352,9 @@ double getTime()
 }
 
 void idle() {
-	/**************************** Your code begin *****************************/
-	if (!heartbeats()) exit(0);// Heatbeats failed, exit the whole process.
-	/**************************** Your code end *****************************/
+	///**************************** Your code begin *****************************/
+	//if (!heartbeats()) exit(0);// Heatbeats failed, exit the whole process.
+	///**************************** Your code end *****************************/
 
 
 
