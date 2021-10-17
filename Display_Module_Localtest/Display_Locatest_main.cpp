@@ -7,23 +7,23 @@
 #include <map>
 
 #ifdef __APPLE__
-	#include <OpenGL/gl.h>
-	#include <OpenGL/glu.h>
-	#include <GLUT/glut.h>
-	#include <unistd.h>
-	#include <sys/time.h>
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#include <GLUT/glut.h>
+#include <unistd.h>
+#include <sys/time.h>
 #elif defined(WIN32)
-	#include <Windows.h>
-	#include <tchar.h>
-	#include <GL/gl.h>
-	#include <GL/glu.h>
-	#include <GL/glut.h>
+#include <Windows.h>
+#include <tchar.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glut.h>
 #else
-	#include <GL/gl.h>
-	#include <GL/glu.h>
-	#include <GL/glut.h>
-	#include <unistd.h>
-	#include <sys/time.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#include <GL/glut.h>
+#include <unistd.h>
+#include <sys/time.h>
 #endif
 
 
@@ -41,7 +41,7 @@
 /**************************** Your code begin *****************************/
 #include <SMStructs.h>
 #include <SMObject.h>
-
+#include<stdlib.h> //rand()
 void drawGPS();
 void drawString(const char* str);
 void selectFont(int size, int charset, const char* face);
@@ -70,24 +70,15 @@ int prev_mouse_x = -1;
 int prev_mouse_y = -1;
 
 // vehicle control related variables
-Vehicle * vehicle = NULL;
+Vehicle* vehicle = NULL;
 double speed = 0;
 double steering = 0;
 
-/**************************** Your code begin *****************************/
-ProcessManagement* ProcessManagementPtr = NULL;
-SM_Laser* SM_LaserPtr = NULL;
-SM_GPS* SM_GPSPtr = NULL;
-SM_VehicleControl* SM_VehicleControlPtr = NULL;
-int cnt_ProcessManagement = 0;
-int MAX_WAITBEAT = 100;
-
 const int WINDOW_WIDTH = 800;
 const int WINDOW_HEIGHT = 600;
-/**************************** Your code begin *****************************/
-
 //int _tmain(int argc, _TCHAR* argv[]) {
-int main(int argc, char ** argv) {
+int main(int argc, char** argv) {
+
 	glutInit(&argc, (char**)(argv));
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DEPTH | GLUT_DOUBLE);
 	glutInitWindowPosition(0, 0);
@@ -111,27 +102,6 @@ int main(int argc, char ** argv) {
 	glutMotionFunc(dragged);
 	glutPassiveMotionFunc(motion);
 
-
-	/**************************** Your code begin *****************************/
-	/* Open existed SharedMemory Object, no need to create a new one.*/
-	SMObject ProcessManagementObj(_TEXT("ProcessManagement"), sizeof(ProcessManagement));
-	ProcessManagementObj.SMAccess();// Open the existed handle of SMO
-	ProcessManagementPtr = (ProcessManagement*)ProcessManagementObj.pData;
-
-	SMObject SM_LaserObj(_TEXT("SM_Laser"), sizeof(SM_Laser));
-	SM_LaserObj.SMAccess();
-	SM_LaserPtr = (SM_Laser*)SM_LaserObj.pData;
-
-	SMObject SM_GPSObj(_TEXT("SM_GPS"), sizeof(SM_GPS));
-	SM_GPSObj.SMAccess();
-	SM_GPSPtr = (SM_GPS*)SM_GPSObj.pData;
-
-	SMObject SM_VehicleControlObj(_TEXT("SM_VehicleControl"), sizeof(SM_VehicleControl));
-	SM_VehicleControlObj.SMAccess();
-	SM_VehicleControlPtr = (SM_VehicleControl*)SM_VehicleControlObj.pData;
-	/***************************** Your code end *****************************/
-
-
 	// -------------------------------------------------------------------------
 	// Please uncomment the following line of code and replace 'MyVehicle'
 	//   with the name of the class you want to show as the current 
@@ -152,37 +122,25 @@ int main(int argc, char ** argv) {
 /**************************** Your code begin *****************************/
 bool heartbeats()
 {
-	if (ProcessManagementPtr->Heartbeat.Flags.Camera == 0b0)
-	{
-		/* Heart beats */
-		ProcessManagementPtr->Heartbeat.Flags.Camera == 0b1;
-		cnt_ProcessManagement = 0;
-	}
-	else
-	{
-		if (cnt_ProcessManagement++ > MAX_WAITBEAT)
-		{
-			ProcessManagementPtr->Shutdown.Flags.Camera = 0b1;
-			return false;
-		}
-	}
 	return true;
 }
 
 void drawGPS()
 {
-	glPushMatrix();// Protect the scene
+	double northing = vehicle->getX() + 90000000;
+	double easting = vehicle->getZ() + 500000;
+	unsigned int height = vehicle->getY();
 
+	glPushMatrix();
 	glColor3f(0.0, 1.0, 0.0);
-	vehicle->positionInGL();// Move the beginning of draw-position to where the car is.
+	vehicle->positionInGL();
 	char* str = NULL;
 	str = new char[30];
-	sprintf(str, "(%.2f, %.2f, %.2f)", SM_GPSPtr->northing - 90000000, SM_GPSPtr->northing - 500000, SM_GPSPtr->height);
+	sprintf(str, "(%.2f, %.2f, %d)", northing - 90000000, easting - 500000, height);
 	glRasterPos3f(0, 1.0, 0);// car: xOz plane, z: height
-	selectFont(20, ANSI_CHARSET, "Times New Roman");//Set the font
+	selectFont(20, ANSI_CHARSET, "Times New Roman");
 	drawString(str);
-
-	glPopMatrix();// Restore the scene
+	glPopMatrix();
 	delete[]str;
 }
 
@@ -216,24 +174,37 @@ void selectFont(int size, int charset, const char* face) {
 	DeleteObject(hOldFont);
 }
 
+double Laser_x[181];
+double Laser_y[181];
 int MAX_DISTANCE = 18000;// mm
 int MIN_DISTANCE = 10000;// mm
 double PI = 3.1416;
 double SCALE = 10.0;// Scale of Laser_Line
 void drawLaser()
 {
+	double Distance;
+	for (int i = 0; i < 181; i++)
+	{
+		Distance = rand() % (MAX_DISTANCE - MIN_DISTANCE);
+		Laser_x[i] = Distance * cos(1.0 * i / 180 * PI - PI / 2);
+		Laser_y[i] = Distance * sin(1.0 * i / 180 * PI - PI / 2);
+	}
+
 	glPushMatrix();
 	vehicle->positionInGL();
+	//glTranslated(0.5, 0, 0);
 	glColor3f(1.0, 0, .5);
 	glBegin(GL_LINES);
 	for (int i = 0; i < 181; i++)
 	{
 		glVertex3f(0, 1.0, 0);
-		glVertex3f(SCALE * SM_LaserPtr->x[i] / MAX_DISTANCE, 1.0, SCALE * SM_LaserPtr->x[i] / MAX_DISTANCE);
+		glVertex3f(SCALE * Laser_x[i] / MAX_DISTANCE, 1.0, SCALE * Laser_y[i] / MAX_DISTANCE);
 	}
 	glEnd();
 	glPopMatrix();
 }
+
+
 /***************************** Your code end *****************************/
 
 void display() {
@@ -246,7 +217,7 @@ void display() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	if(Camera::get()->isPursuitMode() && vehicle != NULL) {
+	if (Camera::get()->isPursuitMode() && vehicle != NULL) {
 		double x = vehicle->getX(), y = vehicle->getY(), z = vehicle->getZ();
 		double dx = cos(vehicle->getRotation() * 3.141592765 / 180.0);
 		double dy = sin(vehicle->getRotation() * 3.141592765 / 180.0);
@@ -257,14 +228,8 @@ void display() {
 	Camera::get()->setLookAt();
 
 	Ground::draw();
-	
-	// draw my vehicle
 
-	/**************************** Your code begin *****************************/
-	vehicle->setX(SM_GPSPtr->northing);
-	vehicle->setZ(SM_GPSPtr->easting);
-	vehicle->setY(SM_GPSPtr->height);
-	/**************************** Your code end *****************************/
+	// draw my vehicle
 
 	if (vehicle != NULL) {
 		vehicle->draw();
@@ -274,11 +239,8 @@ void display() {
 	// draw HUD
 	HUD::Draw();
 
-	/**************************** Your code begin *****************************/
 	drawGPS();
 	drawLaser();
-	/**************************** Your code end *****************************/
-
 	glutSwapBuffers();
 };
 
@@ -295,7 +257,7 @@ double getTime()
 #if defined(WIN32)
 	LARGE_INTEGER freqli;
 	LARGE_INTEGER li;
-	if(QueryPerformanceCounter(&li) && QueryPerformanceFrequency(&freqli)) {
+	if (QueryPerformanceCounter(&li) && QueryPerformanceFrequency(&freqli)) {
 		return double(li.QuadPart) / double(freqli.QuadPart);
 	}
 	else {
@@ -310,10 +272,6 @@ double getTime()
 }
 
 void idle() {
-	/**************************** Your code begin *****************************/
-	if (!heartbeats()) exit(0);// Heatbeats failed, exit the whole process.
-	/**************************** Your code end *****************************/
-
 
 	if (KeyManager::get()->isAsciiKeyPressed('a')) {
 		Camera::get()->strafeLeft();
@@ -343,7 +301,7 @@ void idle() {
 	steering = 0;
 
 	if (KeyManager::get()->isSpecialKeyPressed(GLUT_KEY_LEFT)) {
-		steering = Vehicle::MAX_LEFT_STEERING_DEGS * -1;   
+		steering = Vehicle::MAX_LEFT_STEERING_DEGS * -1;
 	}
 
 	if (KeyManager::get()->isSpecialKeyPressed(GLUT_KEY_RIGHT)) {
@@ -390,7 +348,7 @@ void keydown(unsigned char key, int x, int y) {
 	switch (key) {
 	case 27: // ESC key
 		exit(0);
-		break;      
+		break;
 	case '0':
 		Camera::get()->jumpToOrigin();
 		break;
@@ -411,8 +369,8 @@ void special_keydown(int keycode, int x, int y) {
 
 };
 
-void special_keyup(int keycode, int x, int y) {  
-	KeyManager::get()->specialKeyReleased(keycode);  
+void special_keyup(int keycode, int x, int y) {
+	KeyManager::get()->specialKeyReleased(keycode);
 };
 
 void mouse(int button, int state, int x, int y) {
