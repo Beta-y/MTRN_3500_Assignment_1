@@ -17,7 +17,6 @@ using namespace System::Text;
 using namespace std;
 #define NUM_UNITS 5
 
-void SetupSharedMemory(ProcessManagement* ProcessManagementPtr);
 bool StartProcess(TCHAR* processName, STARTUPINFO* startupInfo, PROCESS_INFORMATION* processInfo);
 bool KillProcess(TCHAR* processName, HANDLE processHandle);
 bool IsProcessRunning(const char* processName);
@@ -43,33 +42,40 @@ int main()
 	ProcessManagement* ProcessManagementPtr = (ProcessManagement*)ProcessManagementObj.pData;
 
 	// Do not shut down any processes at the startup of the program
-	ProcessManagementPtr->Shutdown.Flags.Camera = 0b0;
-	ProcessManagementPtr->Shutdown.Flags.GPS = 0b0;
+	//ProcessManagementPtr->Shutdown.Flags.Camera = 0b0;
+	//ProcessManagementPtr->Shutdown.Flags.GPS = 0b0;
 	ProcessManagementPtr->Shutdown.Flags.Laser = 0b0;
-	ProcessManagementPtr->Shutdown.Flags.OpenGL = 0b0;
+/*	ProcessManagementPtr->Shutdown.Flags.OpenGL = 0b0;
 	ProcessManagementPtr->Shutdown.Flags.ProcessManagement = 0b0;
-	ProcessManagementPtr->Shutdown.Flags.VehicleControl = 0b0;
+	ProcessManagementPtr->Shutdown.Flags.VehicleControl = 0b0*/;
 
-	SMObject SM_GPSObj(_TEXT("SM_GPS"), sizeof(SM_GPS));
-	SM_GPSObj.SMCreate();
-	SM_GPSObj.SMAccess();
+	//SMObject SM_GPSObj(_TEXT("SM_GPS"), sizeof(SM_GPS));
+	//SM_GPSObj.SMCreate();
+	//SM_GPSObj.SMAccess();
 
 	SMObject SM_LaserObj(_TEXT("SM_Laser"), sizeof(SM_Laser));
 	SM_LaserObj.SMCreate();
 	SM_LaserObj.SMAccess();
 
-	SMObject SM_VehicleControlObj(_TEXT("SM_VehicleControl"), sizeof(SM_VehicleControl));
-	SM_VehicleControlObj.SMCreate();
-	SM_VehicleControlObj.SMAccess();
+	//SMObject SM_VehicleControlObj(_TEXT("SM_VehicleControl"), sizeof(SM_VehicleControl));
+	//SM_VehicleControlObj.SMCreate();
+	//SM_VehicleControlObj.SMAccess();
 
 
 	//start all 5 modules
+	ProcessManagementPtr->Heartbeat.Flags.Laser = 0b1;
+	ProcessManagementPtr->Shutdown.Flags.Laser = 0b0;
+
 	STARTUPINFO startupinfos[NUM_UNITS];//Specifies appearance of the main window etc. for a process at creation time.
 	PROCESS_INFORMATION processinfos[NUM_UNITS];//Receives identification information about the new process.
-	for (int i = 0; i < NUM_UNITS; i++)
-	{
-		StartProcess(Units[i], &startupinfos[i], &processinfos[i]);
-	}
+	
+	StartProcess(Units[2], &startupinfos[2], &processinfos[2]);
+	
+	
+	//for (int i = 0; i < NUM_UNITS; i++)
+	//{
+	//	StartProcess(Units[i], &startupinfos[i], &processinfos[i]);
+	//}
 
 	//if (ProcessManagementPtr->Shutdown.Flags.Laser == 0b1)
 	//{
@@ -80,10 +86,10 @@ int main()
 	Sleep(1000);// Wait for 1s to allow processes to fully start up
 
 	int cnt_Laser = 0;
-	int cnt_GPS = 0;
-	int cnt_OpenGL = 0;
-	int cnt_VehicleControl = 0;
-	int cnt_Camera = 0;
+	//int cnt_GPS = 0;
+	//int cnt_OpenGL = 0;
+	//int cnt_VehicleControl = 0;
+	//int cnt_Camera = 0;
 	int MAX_WAITBEAT = 100;
 	// main loop
 	while (1)
@@ -99,11 +105,13 @@ int main()
 		}
 		else if (ProcessManagementPtr->Heartbeat.Flags.Laser == 0b1) // Heartbeat still
 		{
+			cout << "Laser is normal: 1, count=" << cnt_Laser << endl;
 			ProcessManagementPtr->Heartbeat.Flags.Laser = 0b0; // Clear for next heartbeat checking
 			cnt_Laser = 0;
 		}
 		else if (ProcessManagementPtr->Heartbeat.Flags.Laser == 0b0) // Heartbeat stop
 		{
+			cout << "Laser no response: 0, count=" << cnt_Laser << endl;
 			cnt_Laser++;
 			if (cnt_Laser > MAX_WAITBEAT)
 			{
@@ -112,8 +120,8 @@ int main()
 				continue;
 			}
 		}
-
-		if (ProcessManagementPtr->Shutdown.Flags.Camera == 0b1)
+		Sleep(100);
+/*		if (ProcessManagementPtr->Shutdown.Flags.Camera == 0b1)
 		{
 			KillProcess(Units[0], processinfos[0].hProcess);
 			StartProcess(Units[0], &startupinfos[0], &processinfos[0]);
@@ -195,22 +203,21 @@ int main()
 				continue;
 			}
 		}
+	*/
 	}
 
 	//kill all 5 modules
-	for (int i = 0; i < NUM_UNITS; i++)
-	{
-		KillProcess(Units[i], processinfos[i].hProcess);
-	}
+	//for (int i = 0; i < NUM_UNITS; i++)
+	//{
+	//	KillProcess(Units[i], processinfos[i].hProcess);
+	//}
 
+	KillProcess(Units[2], processinfos[2].hProcess);
 	// kill PM module
+	system("pause");
 	return 0;
 }
 
-void SetupSharedMemory(ProcessManagement* ProcessManagementPtr)
-{
-
-}
 // Starting funtion of a process
 bool StartProcess(TCHAR* processName, STARTUPINFO* startupInfo, PROCESS_INFORMATION* processInfo)
 //	STARTUPINFO: https://blog.csdn.net/akof1314/article/details/5471727
@@ -218,7 +225,7 @@ bool StartProcess(TCHAR* processName, STARTUPINFO* startupInfo, PROCESS_INFORMAT
 {
 	if (!IsProcessRunning((const char*)processName))
 	{
-		ZeroMemory(startupInfo, sizeof(*startupInfo)); //ZeroMemoryºêÓÃ0À´Ìî³äÒ»¿éÄÚ´æÇøÓò
+		ZeroMemory(startupInfo, sizeof(*startupInfo)); //ZeroMemoryå®ç”¨0æ¥å¡«å……ä¸€å—å†…å­˜åŒºåŸŸ
 		(*startupInfo).cb = sizeof(*startupInfo);
 		ZeroMemory(processInfo, sizeof(*processInfo));
 		//CreateProcess:  https://blog.csdn.net/bzhxuexi/article/details/23950701
