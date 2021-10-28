@@ -28,18 +28,18 @@ int main()
 	SM_GPSObj.SMAccess();
 	SM_GPS* SM_GPSPtr = (SM_GPS*)SM_GPSObj.pData;
 
-	TcpClient^ GPS_Client = gcnew TcpClient(GPS_IP, GPS_PORT);
-	GPS_Client->NoDelay = true;
-	GPS_Client->ReceiveTimeout = RECV_TIMEOUT;
-	GPS_Client->SendTimeout = SEND_TIMEOUT;//ms
-	GPS_Client->ReceiveBufferSize = RECVBUF_MAXSIZE;
-	GPS_Client->SendBufferSize = SENDBUF_MAXSIZE;
+	//TcpClient^ GPS_Client = gcnew TcpClient(GPS_IP, GPS_PORT);
+	//GPS_Client->NoDelay = true;
+	//GPS_Client->ReceiveTimeout = RECV_TIMEOUT;
+	//GPS_Client->SendTimeout = SEND_TIMEOUT;//ms
+	//GPS_Client->ReceiveBufferSize = RECVBUF_MAXSIZE;
+	//GPS_Client->SendBufferSize = SENDBUF_MAXSIZE;
 
-	/* Recv buffer*/
-	array<unsigned char>^ GPS_RecvData;
-	GPS_RecvData = gcnew array<unsigned char>(RECVBUF_MAXSIZE);
+	///* Recv buffer*/
+	//array<unsigned char>^ GPS_RecvData;
+	//GPS_RecvData = gcnew array<unsigned char>(RECVBUF_MAXSIZE);
 
-	NetworkStream^ NETStream = GPS_Client->GetStream();
+	//NetworkStream^ NETStream = GPS_Client->GetStream();
 	int cnt_ProcessManagement = 0;
 	int MAX_WAITBEAT = 100;
 	/* Loop */
@@ -48,13 +48,15 @@ int main()
 		if (ProcessManagementPtr->Heartbeat.Flags.GPS == 0b0)
 		{
 			/* Heart beats */
-			ProcessManagementPtr->Heartbeat.Flags.GPS == 0b1;
+			std::cout << "PM is normal: 1, count=" << cnt_ProcessManagement << std::endl;
+			ProcessManagementPtr->Heartbeat.Flags.GPS = 0b1;
 			cnt_ProcessManagement = 0;
+			/*
 			if (NETStream->DataAvailable)
 			{
 				NETStream->Read(GPS_RecvData, 0, GPS_RecvData->Length);
 
-				/* Codes from lecture slite - begin*/
+				// Codes from lecture slite - begin
 				unsigned int Header = 0;
 				int i = 0;
 				int Start;
@@ -72,8 +74,8 @@ int main()
 				SM_GPS GPS_SMOBject;
 				unsigned char* GPS_BytePtr = (unsigned char*)&GPS_SMOBject;
 
-				/* Process data Begin:
-					if data from GPS include:northing->easting->height->other info->CRC checksum */
+				// Process data Begin:
+					if data from GPS include:northing->easting->height->other info->CRC checksum
 				int j = 0;
 				for (j = Start; j < Start + sizeof(SM_GPS) - sizeof(unsigned int); j++)// GPS_SMOBject.northing, GPS_SMOBject.easting, GPS_SMOBject.height
 				{
@@ -98,7 +100,7 @@ int main()
 				{
 					std::cout << "Failed to get GPS Data! " << std::endl;
 				}
-				/* Process data End*/
+				// Process data End
 
 				std::cout << "Northing: " << GPS_SMOBject.northing << std::endl;
 				std::cout << "Easting: " << GPS_SMOBject.easting << std::endl;
@@ -106,17 +108,20 @@ int main()
 				std::cout << std::hex << "Recv_CRC: " << GPS_SMOBject.checksum << std::endl;
 				std::cout << std::hex << "Cac_CRC: " << CRC_checksum << std::endl;
 			}
+			*/
 		}
 		else
 		{
+			Sleep(5);// Wait 5ms for PM response
+			std::cout << "PM no response: 0, count=" << cnt_ProcessManagement << std::endl;
 			if (cnt_ProcessManagement++ > MAX_WAITBEAT)
 			{
 				ProcessManagementPtr->Shutdown.Flags.GPS = 0b1;
 			}
 		}
 	}
-	NETStream->Close();
-	GPS_Client->Close();
+	//NETStream->Close();
+	//GPS_Client->Close();
 	return 0;
 }
 
